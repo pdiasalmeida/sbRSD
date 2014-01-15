@@ -2,3 +2,7 @@
 .classpath
 .project
 .cproject
+
+# Built objects and executables
+*.o
+lb_trafficSignDetect
