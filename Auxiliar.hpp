@@ -38,53 +38,129 @@ public:
 	{
 		assert( image.channels() == 1 && image.type() == CV_8UC1 );
 
-		bool print = false;
+		cv::Mat gradientImage( image.rows-2, image.cols-2, CV_16U );
+		cv::Mat gradientImageOut( image.rows-2, image.cols-2, CV_8U );
 
-		cv::Mat gradientImage( image.rows, image.cols, CV_32FC1 );
-
-		short kernel[3][3] = {	{1, 0, -1},
-								{2, 0, -2},
-								{1, 0, -1}
+		short kernelX[3][3] = {	{1, 	0, 		-1},
+								{2, 	0, 		-2},
+								{1, 	0, 		-1}
 							};
 
-		for( int i = 0; i < image.rows; ++i )
-		{
-			for( int j = 0; j < image.cols; ++j )
-			{
-				float v = 0.0f;
+		short kernelY[3][3] = {	{1,		2, 		1},
+								{0,		0, 		0},
+								{-1,	-2, 	-1}
+							};
 
-				std::cout << "image x,y:" << i << "," << j << std::endl;
-				for( int ki = 0; ki < 3; ki++ )
+		float maxVal = 0.0f;
+
+		for( ushort i = 1; i < image.rows -1; i++ )
+		{
+			for( ushort j = 1; j < image.cols -1; j++ )
+			{
+				short vX = 0;
+				short vY = 0;
+
+				for( ushort ki = 0; ki < 3; ki++ )
 				{
-					int x = i+(ki-1);
+					short x = i+(ki-1);
 					if( x >= 0 && x<image.rows )
 					{
-						for( int kj = 0; kj < 3; kj++ )
+						for( ushort kj = 0; kj < 3; kj++ )
 						{
-							int y = j+(kj-1);
+							short y = j+(kj-1);
 							if( y>=0 && y<image.cols )
 							{
-								std::cout << "image neighbor x,y:" << x << "," << y;
-								std::cout << " kernel value:" << kernel[ki][kj] << std::endl;
-								v += ((short)image.at<uchar>(x,y)) * kernel[ki][kj];
+								ushort valImg = image.at<uchar>(x,y);
+								vX += valImg * kernelX[ki][kj];
+								vY += valImg * kernelY[ki][kj];
 							}
 						}
 					}
 				}
-				std::cout << std::endl;
-				std::cout << std::endl;
+				ushort magG = sqrt(pow(vX,2)+pow(vY,2));
 
-				gradientImage.at<float>(i,j) = (float) v;
-				if( print == true )
-				{
-					std::cout << v ;
-					std::cout << "\t";
-				}
+				maxVal = (magG>maxVal)? magG : maxVal;
+
+				gradientImage.at<ushort>(i-1,j-1) = magG;
 		    }
-			if( print == true) std::cout << std::endl;
 		}
 
-		return gradientImage;
+		float thresh = 0.05 * maxVal;
+
+		for( int i = 0; i < gradientImage.rows; i++ )
+		{
+			for( int j = 0; j < gradientImage.cols; j++ )
+			{
+				if( gradientImage.at<ushort>(i,j) < thresh )
+				{
+					gradientImageOut.at<uchar>(i,j) = 0;
+				}
+				else
+				{
+					gradientImageOut.at<uchar>(i,j) = (gradientImage.at<ushort>(i,j) / maxVal) * 255;
+				}
+			}
+		}
+
+		return gradientImageOut;
+	}
+
+	static cv::Mat myCustomGradient2(cv::Mat image)
+		{
+			assert( image.channels() == 1 && image.type() == CV_8UC1 );
+
+			cv::Mat gradientImage( image.rows-2, image.cols-2, CV_16U );
+			cv::Mat gradientImageOut( image.rows-2, image.cols-2, CV_8U );
+
+			float maxVal = 0.0f;
+
+			for( ushort i = 1; i < image.rows -1; i++ )
+			{
+				for( ushort j = 1; j < image.cols -1; j++ )
+				{
+					ushort magG =  abs( (image.at<uchar>(i-1,j-1)+2*image.at<uchar>(i-1,j)+image.at<uchar>(i-1,j+1)) -
+							(image.at<uchar>(i+1,j-1)+2*image.at<uchar>(i+1,j)+image.at<uchar>(i+1,j+1)) ) +
+									abs( (image.at<uchar>(i-1,j+1)+2*image.at<uchar>(i,j+1)+image.at<uchar>(i+1,j+1)) -
+											(image.at<uchar>(i-1,j-1)+2*image.at<uchar>(i,j-1)+image.at<uchar>(i+1,j-1)) );
+
+					maxVal = (magG>maxVal)? magG : maxVal;
+
+					gradientImage.at<ushort>(i-1,j-1) = magG;
+			    }
+			}
+
+			float thresh = 0.05 * maxVal;
+
+			for( int i = 0; i < gradientImage.rows; i++ )
+			{
+				for( int j = 0; j < gradientImage.cols; j++ )
+				{
+					if( gradientImage.at<ushort>(i,j) < thresh )
+					{
+						gradientImageOut.at<uchar>(i,j) = 0;
+					}
+					else
+					{
+						gradientImageOut.at<uchar>(i,j) = (gradientImage.at<ushort>(i,j) / maxVal) * 255;
+					}
+				}
+			}
+
+			return gradientImageOut;
+		}
+
+	static void printImage(cv::Mat image)
+	{
+		std::cout << "Type: " << image.type() << std::endl;
+		for( int i = 0; i < image.rows; i++ )
+		{
+			for( int j = 0; j < image.cols; j++ )
+			{
+				uchar v = image.at<uchar>(i,j);
+				std::cout << v << "\t";
+			}
+			std::cout << std::endl;
+		}
 	}
 
 private:
