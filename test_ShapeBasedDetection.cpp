@@ -7,18 +7,18 @@
 #include <cmath>
 
 int main(int argc, char** argv) {
-	cv::Mat image, grad;
+	cv::Mat image, grad, vote;
 	GradientHandler gh;
 
 	// load image as grayscale
-	image = cv::imread( "tests/test4.jpg", 0 );
+	image = cv::imread( "tests/test6.jpg", 0 );
 	gh = GradientHandler(image);
 
 	//-----------------------------------Calculate_MyGradient_Image-----------------------------------//
 	clock_t t;
 	t = clock();
 
-	gh.getGradient();
+	gh.getGradient( GradientHandler::GTYPE_OCV );
 
 	t = clock() - t;
 	float calcDuration = ( (float) t ) / CLOCKS_PER_SEC;
@@ -48,12 +48,16 @@ int main(int argc, char** argv) {
 	//-----------------------------------Calculate_Gradient_Images------------------------------------//
 
 	grad = gh.getGradientImage();
+	vote = gh.getVoteImage();
 
 	cv::namedWindow("Original", CV_WINDOW_NORMAL);
 	cv::imshow("Original", image);
 
 	cv::namedWindow("Gradient", CV_WINDOW_NORMAL);
 	cv::imshow("Gradient", grad);
+
+	cv::namedWindow("Vote", CV_WINDOW_NORMAL);
+	cv::imshow("Vote", vote);
 
 	/**cv::namedWindow("MyGradient (technique 1)", CV_WINDOW_NORMAL);
 	cv::imshow("MyGradient (technique 1)", grad1);
