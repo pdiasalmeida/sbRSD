@@ -1,22 +1,41 @@
 #include "GradientHandler.hpp"
 
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 #include <iostream>
 
-GradientHandler::GradientHandler()
+GradientHandler::GradientHandler(){}
+
+void GradientHandler::setImage( std::string path )
 {
-	_baseImage = cv::Mat();
+	// load image as grayscale
+	_baseImage = cv::imread( "tests/test6.jpg", 0 );
+	_imageName = path;
+
+	_gradientImage.release();
+	_voteImage.release();
 }
 
-GradientHandler::GradientHandler( cv::Mat baseImage )
+cv::Mat GradientHandler::getBaseImage()
 {
-	assert( baseImage.channels() == 1 && baseImage.type() == CV_8UC1 );
-
-	_baseImage = baseImage;
+	assert( !_baseImage.empty() );
+	return _baseImage;
 }
 
-void GradientHandler::getGradient( int method )
+cv::Mat GradientHandler::getGradientImage()
+{
+	assert( !_gradientImage.empty() );
+	return _gradientImage;
+}
+
+cv::Mat GradientHandler::getVoteImage()
+{
+	assert( !_voteImage.empty() );
+	return _voteImage;
+}
+
+void GradientHandler::computeGradient( int method )
 {
 	assert( !_baseImage.empty() );
 
@@ -33,18 +52,6 @@ void GradientHandler::getGradient( int method )
 		default:
 			break;
 	}
-}
-
-cv::Mat GradientHandler::getGradientImage()
-{
-	assert( !_gradientImage.empty() );
-	return _gradientImage;
-}
-
-cv::Mat GradientHandler::getVoteImage()
-{
-	assert( !_voteImage.empty() );
-	return _voteImage;
 }
 
 void GradientHandler::openCVGradient( int scale, int delta, int ddepth )

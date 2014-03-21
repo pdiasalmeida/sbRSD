@@ -1,9 +1,11 @@
-CC=g++
-CFLAGS=-c -g -O0 -Wall
-LDFLAGS=-lopencv_core -lopencv_highgui -lopencv_imgproc
-SOURCES=GradientHandler.cpp test_ShapeBasedDetection.cpp
-OBJECTS=$(SOURCES:.cpp=.o)
-EXECUTABLE=lb_trafficSignDetect
+CC=			g++
+CFLAGS=		-c -g -O0 -Wall `pkg-config --cflags opencv`
+LDFLAGS=	`pkg-config --libs opencv`
+SOURCES=	auxiliar/Auxiliar.cpp \
+			GradientHandler.cpp \
+			sbDetection.cpp
+OBJECTS=	$(SOURCES:.cpp=.o)
+EXECUTABLE=	lb_trafficSignDetect
 
 all: $(SOURCES) $(EXECUTABLE)
 	

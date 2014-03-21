@@ -6,12 +6,12 @@
 class GradientHandler {
 public:
 	GradientHandler();
-	GradientHandler( cv::Mat baseImage );
-
 	enum TECHNS{ GTYPE_OCV, GTYPE_CUST, GTYPE_CUST2 };
 
-	void getGradient( int method = GTYPE_CUST );
+	void setImage( std::string path );
+	void computeGradient( int method = GTYPE_CUST );
 
+	cv::Mat getBaseImage();
 	cv::Mat getGradientImage();
 	cv::Mat getVoteImage();
 
@@ -22,6 +22,8 @@ protected:
 	cv::Mat _gradientImage;
 	cv::Mat _voteImage;
 	std::pair<float,float> _equiImage;
+
+	std::string _imageName;
 
 private:
 	void openCVGradient( int scale=1, int delta=0, int ddepth=CV_32F );

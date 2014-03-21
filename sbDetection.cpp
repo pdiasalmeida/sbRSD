@@ -1,7 +1,6 @@
-#include "Auxiliar.hpp"
+#include "auxiliar/Auxiliar.hpp"
 #include "GradientHandler.hpp"
 
-#include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 #include <cmath>
@@ -10,15 +9,14 @@ int main(int argc, char** argv) {
 	cv::Mat image, grad, vote;
 	GradientHandler gh;
 
-	// load image as grayscale
-	image = cv::imread( "tests/test6.jpg", 0 );
-	gh = GradientHandler(image);
+	gh = GradientHandler();
+	gh.setImage("tests/test6.jpg");
 
 	//-----------------------------------Calculate_MyGradient_Image-----------------------------------//
 	clock_t t;
 	t = clock();
 
-	gh.getGradient( GradientHandler::GTYPE_OCV );
+	gh.computeGradient( GradientHandler::GTYPE_OCV );
 
 	t = clock() - t;
 	float calcDuration = ( (float) t ) / CLOCKS_PER_SEC;
@@ -47,6 +45,7 @@ int main(int argc, char** argv) {
 
 	//-----------------------------------Calculate_Gradient_Images------------------------------------//
 
+	image = gh.getBaseImage();
 	grad = gh.getGradientImage();
 	vote = gh.getVoteImage();
 
