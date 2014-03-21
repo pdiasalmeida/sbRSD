@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
 	clock_t t;
 	t = clock();
 
-	gh.computeGradient( GradientHandler::GTYPE_OCV );
+	gh.computeGradient( GradientHandler::SHAPE_SQR, GradientHandler::GTYPE_OCV );
 
 	t = clock() - t;
 	float calcDuration = ( (float) t ) / CLOCKS_PER_SEC;

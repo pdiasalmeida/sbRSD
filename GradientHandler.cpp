@@ -10,7 +10,7 @@ GradientHandler::GradientHandler(){}
 void GradientHandler::setImage( std::string path )
 {
 	// load image as grayscale
-	_baseImage = cv::imread( "tests/test6.jpg", 0 );
+	_baseImage = cv::imread( path, 0 );
 	_imageName = path;
 
 	_gradientImage.release();
@@ -35,26 +35,45 @@ cv::Mat GradientHandler::getVoteImage()
 	return _voteImage;
 }
 
-void GradientHandler::computeGradient( int method )
+void GradientHandler::computeGradient( int shape, int method )
 {
 	assert( !_baseImage.empty() );
 
+	float tanpi = 0.0f;
+
+	switch( shape ) {
+		case SHAPE_CIR:
+			tanpi = TANPI1;
+			break;
+		case SHAPE_TRI:
+			tanpi = TANPI3;
+			break;
+		case SHAPE_SQR:
+			tanpi = TANPI4;
+			break;
+		case SHAPE_OCT:
+			tanpi = TANPI8;
+			break;
+		default:
+			break;
+	}
+
 	switch( method ) {
 		case GTYPE_OCV:
-			openCVGradient();
+			openCVGradient(tanpi);
 			break;
 		case GTYPE_CUST:
-			myCustomGradient();
+			myCustomGradient(tanpi);
 			break;
 		case GTYPE_CUST2:
-			myCustomGradient2();
+			myCustomGradient2(tanpi);
 			break;
 		default:
 			break;
 	}
 }
 
-void GradientHandler::openCVGradient( int scale, int delta, int ddepth )
+void GradientHandler::openCVGradient( float tanpi, int scale, int delta, int ddepth )
 {
 	cv::Mat grad_x, grad_y;
 	cv::Mat abs_grad_x, abs_grad_y;
@@ -63,7 +82,7 @@ void GradientHandler::openCVGradient( int scale, int delta, int ddepth )
 	_voteImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_8U );
 
 	short rd = 5;
-	short w = round( rd * TANPI4 );
+	short w = round( rd * tanpi );
 	short thresh = 50;
 
 	// Gradient X
@@ -113,7 +132,7 @@ void GradientHandler::openCVGradient( int scale, int delta, int ddepth )
 	}
 }
 
-void GradientHandler::myCustomGradient()
+void GradientHandler::myCustomGradient(float tanpi)
 {
 	cv::Mat auxGradientImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_16U );
 	std::pair<short,short> gradientVectorImage[_baseImage.rows][_baseImage.cols];
@@ -133,7 +152,7 @@ void GradientHandler::myCustomGradient()
 
 	float maxVal = 0.0f;
 	float rd = 5;
-	short w = round(rd * TANPI4);
+	short w = round(rd * tanpi);
 	float threshRatio = 0.15f;
 
 	for( ushort r = 1; r < _baseImage.rows - 1; r++ )
@@ -213,7 +232,7 @@ void GradientHandler::myCustomGradient()
 	}
 }
 
-void GradientHandler::myCustomGradient2()
+void GradientHandler::myCustomGradient2(float tanpi)
 {
 	cv::Mat auxGradientImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_16U );
 	std::pair<short,short> gradientVectorImage[_baseImage.rows][_baseImage.cols];
@@ -223,7 +242,7 @@ void GradientHandler::myCustomGradient2()
 
 	float maxVal = 0.0f;
 	float rd = 5;
-	short w = round(rd * TANPI4);
+	short w = round(rd * tanpi);
 	float threshRatio = 0.15f;
 
 	for( ushort r = 1; r < _baseImage.rows - 1; r++ )
