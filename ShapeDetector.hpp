@@ -3,9 +3,9 @@
 
 #include <opencv2/core/core.hpp>
 
-class GradientHandler {
+class ShapeDetector {
 public:
-	GradientHandler();
+	ShapeDetector();
 	enum TECHNS{ GTYPE_OCV, GTYPE_CUST, GTYPE_CUST2 };
 	enum SHAPS{ SHAPE_CIR, SHAPE_TRI, SHAPE_SQR, SHAPE_OCT };
 
@@ -15,16 +15,24 @@ public:
 	cv::Mat getBaseImage();
 	cv::Mat getGradientImage();
 	cv::Mat getVoteImage();
+	cv::Mat getGradientAngles();
 
-	~GradientHandler();
+	std::string getMethodName();
+
+	~ShapeDetector();
 
 protected:
 	cv::Mat _baseImage;
 	cv::Mat _gradientImage;
 	cv::Mat _voteImage;
+
+	cv::Mat _gradientAngles;
 	std::pair<float,float> _equiImage;
 
 	std::string _imageName;
+
+	int _shape;
+	int _method;
 
 private:
 	void openCVGradient( float tanpi, int scale=1, int delta=0, int ddepth=CV_32F );

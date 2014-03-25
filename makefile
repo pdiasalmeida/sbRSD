@@ -2,7 +2,7 @@ CC=			g++
 CFLAGS=		-c -g -O0 -Wall `pkg-config --cflags opencv`
 LDFLAGS=	`pkg-config --libs opencv`
 SOURCES=	auxiliar/Auxiliar.cpp \
-			GradientHandler.cpp \
+			ShapeDetector.cpp \
 			sbDetection.cpp
 OBJECTS=	$(SOURCES:.cpp=.o)
 EXECUTABLE=	lb_trafficSignDetect

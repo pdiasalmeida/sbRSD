@@ -1,13 +1,17 @@
-#include "GradientHandler.hpp"
+#include "ShapeDetector.hpp"
 
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 #include <iostream>
 
-GradientHandler::GradientHandler(){}
+ShapeDetector::ShapeDetector()
+{
+	_shape = -1;
+	_method = -1;
+}
 
-void GradientHandler::setImage( std::string path )
+void ShapeDetector::setImage( std::string path )
 {
 	// load image as grayscale
 	_baseImage = cv::imread( path, 0 );
@@ -17,31 +21,39 @@ void GradientHandler::setImage( std::string path )
 	_voteImage.release();
 }
 
-cv::Mat GradientHandler::getBaseImage()
+cv::Mat ShapeDetector::getBaseImage()
 {
 	assert( !_baseImage.empty() );
 	return _baseImage;
 }
 
-cv::Mat GradientHandler::getGradientImage()
+cv::Mat ShapeDetector::getGradientImage()
 {
 	assert( !_gradientImage.empty() );
 	return _gradientImage;
 }
 
-cv::Mat GradientHandler::getVoteImage()
+cv::Mat ShapeDetector::getVoteImage()
 {
 	assert( !_voteImage.empty() );
 	return _voteImage;
 }
 
-void GradientHandler::computeGradient( int shape, int method )
+cv::Mat ShapeDetector::getGradientAngles()
+{
+	assert( !_gradientAngles.empty() );
+	return _gradientAngles;
+}
+
+void ShapeDetector::computeGradient( int shape, int method )
 {
 	assert( !_baseImage.empty() );
 
 	float tanpi = 0.0f;
+	_shape = shape;
+	_method = method;
 
-	switch( shape ) {
+	switch( shape ){
 		case SHAPE_CIR:
 			tanpi = TANPI1;
 			break;
@@ -58,7 +70,7 @@ void GradientHandler::computeGradient( int shape, int method )
 			break;
 	}
 
-	switch( method ) {
+	switch( method ){
 		case GTYPE_OCV:
 			openCVGradient(tanpi);
 			break;
@@ -73,13 +85,14 @@ void GradientHandler::computeGradient( int shape, int method )
 	}
 }
 
-void GradientHandler::openCVGradient( float tanpi, int scale, int delta, int ddepth )
+void ShapeDetector::openCVGradient( float tanpi, int scale, int delta, int ddepth )
 {
 	cv::Mat grad_x, grad_y;
 	cv::Mat abs_grad_x, abs_grad_y;
 
 	_gradientImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_8U );
 	_voteImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_8U );
+	_gradientAngles = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_32F );
 
 	short rd = 5;
 	short w = round( rd * tanpi );
@@ -112,6 +125,8 @@ void GradientHandler::openCVGradient( float tanpi, int scale, int delta, int dde
 				short xmin = vc - 2*w; if(xmin<0) xmin = 0;
 				short xmax = vc + 2*w; if(xmax>_voteImage.rows-1) xmax = _voteImage.rows-1;
 
+				_gradientAngles.at<float>(r,c) = angle;
+
 				for( int i = xmin; i <= xmax; i++ ){
 					if( i < _voteImage.cols && vr >= 0 && vr < _voteImage.rows )
 					{
@@ -132,7 +147,7 @@ void GradientHandler::openCVGradient( float tanpi, int scale, int delta, int dde
 	}
 }
 
-void GradientHandler::myCustomGradient(float tanpi)
+void ShapeDetector::myCustomGradient(float tanpi)
 {
 	cv::Mat auxGradientImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_16U );
 	std::pair<short,short> gradientVectorImage[_baseImage.rows][_baseImage.cols];
@@ -232,7 +247,7 @@ void GradientHandler::myCustomGradient(float tanpi)
 	}
 }
 
-void GradientHandler::myCustomGradient2(float tanpi)
+void ShapeDetector::myCustomGradient2(float tanpi)
 {
 	cv::Mat auxGradientImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_16U );
 	std::pair<short,short> gradientVectorImage[_baseImage.rows][_baseImage.cols];
@@ -314,7 +329,28 @@ void GradientHandler::myCustomGradient2(float tanpi)
 	}
 }
 
-GradientHandler::~GradientHandler()
+std::string ShapeDetector::getMethodName()
+{
+	std::string result;
+
+	switch( _method ){
+		case GTYPE_OCV:
+			result = "OpenCV gradient";
+			break;
+		case GTYPE_CUST:
+			result = "Custom method 1";
+			break;
+		case GTYPE_CUST2:
+			result = "Custom method 2";
+			break;
+		default:
+			break;
+	}
+
+	return result;
+}
+
+ShapeDetector::~ShapeDetector()
 {
 	_baseImage.release();
 	_gradientImage.release();

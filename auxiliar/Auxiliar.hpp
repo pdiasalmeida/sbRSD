@@ -10,6 +10,7 @@
 class Auxiliar {
 public:
 	static void printImage(cv::Mat image);
+	static void printFImage(cv::Mat image);
 
 private:
 	Auxiliar(){}

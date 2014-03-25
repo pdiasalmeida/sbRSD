@@ -3,6 +3,8 @@
 .project
 .cproject
 
+.readme.md.html
+
 # Built objects and executables
 *.o
 lb_trafficSignDetect
