@@ -16,9 +16,7 @@ int main(int argc, char** argv) {
 	t = clock();
 
 	sd.setImage("tests/test6.png");
-	sd.computeVoteImage( ShapeDetector::SHAPE_SQR, ShapeDetector::GTYPE_OCV );
-	sd.computeEquiMagnitude();
-	sd.computeShapeResponse();
+	sd.computeShapeResponse(ShapeDetector::SHAPE_SQR,4,6);
 
 	t = clock() - t;
 	float calcDuration = ( (float) t ) / CLOCKS_PER_SEC;

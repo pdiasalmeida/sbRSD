@@ -11,9 +11,9 @@ public:
 
 	void setImage( std::string path );
 
-	void computeVoteImage( int shape, int method = GTYPE_CUST );
+	void computeVoteImage( int shape, int radius );
 	void computeEquiMagnitude();
-	void computeShapeResponse();
+	void computeShapeResponse(int shape, int minRadius, int maxRadius);
 
 	cv::Mat getBaseImage();
 	cv::Mat getGradientImage();
@@ -31,6 +31,8 @@ protected:
 	cv::Mat _voteImage;
 	cv::Mat _magEqImg;
 	cv::Mat _shapeResponse;
+	cv::Mat _gradY;
+	cv::Mat _gradX;
 
 	cv::Point** _equiImageData;
 
@@ -39,10 +41,15 @@ protected:
 	int _nSides;
 	int _method;
 
+	int _minRadius;
+	int _maxRadius;
+
 private:
-	void openCVGradient( float tanpi, int scale=1, int delta=0, int ddepth=CV_32F );
-	void myCustomGradient(float tanpi);
-	void myCustomGradient2(float tanpi);
+	void openCVGradient( int scale=1, int delta=0, int ddepth=CV_32F );
+	void myCustomGradient(float tanpi, int radius);
+	void myCustomGradient2(float tanpi, int radius);
+
+	void releaseEquiImageData();
 
 	static const float TANPI8 = 0.41421356237;
 	static const float TANPI4 = 1;

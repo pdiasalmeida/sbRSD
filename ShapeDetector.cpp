@@ -11,6 +11,9 @@ ShapeDetector::ShapeDetector()
 	_method = -1;
 	_nSides = -1;
 	_equiImageData = NULL;
+
+	_minRadius = -1;
+	_maxRadius = -1;
 }
 
 void ShapeDetector::setImage( std::string path )
@@ -18,7 +21,6 @@ void ShapeDetector::setImage( std::string path )
 	// load image as grayscale
 	_baseImage = cv::imread( path, 0 );
 	_imageName = path;
-
 	_gradientImage.release();
 	_voteImage.release();
 }
@@ -74,13 +76,12 @@ std::string ShapeDetector::getMethodName()
 	return result;
 }
 
-void ShapeDetector::computeVoteImage( int shape, int method )
+void ShapeDetector::computeVoteImage( int shape, int radius )
 {
 	assert( !_baseImage.empty() );
 
 	float tanpi = 0.0f;
 	_shape = shape;
-	_method = method;
 
 	switch( shape ){
 		case SHAPE_CIR:
@@ -103,87 +104,17 @@ void ShapeDetector::computeVoteImage( int shape, int method )
 			break;
 	}
 
-	switch( method ){
-		case GTYPE_OCV:
-			openCVGradient(tanpi);
-			break;
-		case GTYPE_CUST:
-			myCustomGradient(tanpi);
-			break;
-		case GTYPE_CUST2:
-			myCustomGradient2(tanpi);
-			break;
-		default:
-			break;
-	}
-}
-
-void ShapeDetector::computeEquiMagnitude()
-{
-	assert( !_voteImage.empty() );
-	_magEqImg = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_8U );
-
-	for( int r = 0; r < _gradientImage.rows; r++ )
-		for( int c = 0; c < _gradientImage.cols; c++ )
-		{
-			int res = sqrt( pow(_equiImageData[r][c].x,2)+pow(_equiImageData[r][c].y,2) );
-			_magEqImg.at<uchar>(r,c) = res>255?255:res;
-		}
-}
-
-void ShapeDetector::computeShapeResponse()
-{
-	assert( !_magEqImg.empty() );
-	_shapeResponse = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_8U );
-
-	float rd = 5;
-	short w = round(rd * TANPI4);
-	float dem = pow(2*w*rd,2);
-
-	for( int r = 0; r < _baseImage.rows; r++ )
-		for( int c = 0; c < _baseImage.cols; c++ )
-		{
-			int v = _voteImage.at<int>(r,c);
-			int m = _magEqImg.at<uchar>(r,c);
-			int num = v*m;
-			if( num > 0 )
-			{
-				int res = round(num/dem);
-				std::cout << res << std::endl;
-				_shapeResponse.at<uchar>(r,c) = res>255?255:res;
-			}
-		}
-}
-
-void ShapeDetector::openCVGradient( float tanpi, int scale, int delta, int ddepth )
-{
-	cv::Mat grad_x, grad_y;
-	cv::Mat abs_grad_x, abs_grad_y;
-
-	_gradientImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_32S );
 	_voteImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_32S );
 
 	_equiImageData = new cv::Point*[_baseImage.rows];
 
-	for( int r = 0; r < _gradientImage.rows; r++ )
+	for( int r = 0; r < _baseImage.rows; r++ )
 	{
 		_equiImageData[r] = new cv::Point[_baseImage.cols];
 	}
 
-	short rd = 5;
-	short w = round( rd * tanpi );
+	short w = round( radius * tanpi );
 	short thresh = 50;
-
-	// Gradient X
-	cv::Sobel( _baseImage, grad_x, ddepth, 1, 0, 3, scale, delta, cv::BORDER_DEFAULT );
-	convertScaleAbs( grad_x, abs_grad_x );
-
-	// Gradient Y
-	cv::Sobel( _baseImage, grad_y, ddepth, 0, 1, 3, scale, delta, cv::BORDER_DEFAULT );
-	convertScaleAbs( grad_y, abs_grad_y );
-
-	// Total Gradient (approximate)
-	addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, _gradientImage );
 
 	for( int r = 0; r < _gradientImage.rows; r++ )
 	{
@@ -191,10 +122,10 @@ void ShapeDetector::openCVGradient( float tanpi, int scale, int delta, int ddept
 		{
 			if(_gradientImage.at<uchar>(r,c) >= thresh)
 			{
-				int mag = round(sqrt( pow(grad_y.at<float>(r,c),2)+ pow(grad_x.at<float>(r,c),2) ));
-				float angle = atan2(grad_y.at<float>(r,c),grad_x.at<float>(r,c));
-				short dx = round(rd*cos(angle));
-				short dy = round(rd*sin(angle));
+				int mag = round(sqrt( pow(_gradY.at<float>(r,c),2)+ pow(_gradX.at<float>(r,c),2) ));
+				float angle = atan2(_gradY.at<float>(r,c),_gradX.at<float>(r,c));
+				short dx = round(radius*cos(angle));
+				short dy = round(radius*sin(angle));
 				float nangle = _nSides * angle;
 
 				short vr = (r) + dy;
@@ -229,7 +160,69 @@ void ShapeDetector::openCVGradient( float tanpi, int scale, int delta, int ddept
 	}
 }
 
-void ShapeDetector::myCustomGradient(float tanpi)
+void ShapeDetector::computeEquiMagnitude()
+{
+	assert( !_voteImage.empty() );
+	_magEqImg = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_8U );
+
+	for( int r = 0; r < _gradientImage.rows; r++ )
+		for( int c = 0; c < _gradientImage.cols; c++ )
+		{
+			int res = sqrt( pow(_equiImageData[r][c].x,2)+pow(_equiImageData[r][c].y,2) );
+			_magEqImg.at<uchar>(r,c) = res>255?255:res;
+		}
+}
+
+void ShapeDetector::computeShapeResponse(int shape, int minRadius, int maxRadius)
+{
+	_shapeResponse = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_8U );
+	openCVGradient();
+
+	for( int i = minRadius; i <= maxRadius; i++ )
+	{
+		computeVoteImage(shape, i);
+		computeEquiMagnitude();
+
+		short w = round(i * TANPI4);
+		float dem = pow(2*w*i,2);
+
+		for( int r = 0; r < _baseImage.rows; r++ )
+			for( int c = 0; c < _baseImage.cols; c++ )
+			{
+				int v = _voteImage.at<int>(r,c);
+				int m = _magEqImg.at<uchar>(r,c);
+				int num = v*m;
+				if( num > 0 )
+				{
+					int res = round(num/dem);
+					if(_shapeResponse.at<uchar>(r,c)+res>255)
+						_shapeResponse.at<uchar>(r,c) = 255;
+					else _shapeResponse.at<uchar>(r,c) += res;
+
+					//_shapeResponse.at<int>(r,c) += res;
+				}
+			}
+	}
+}
+
+void ShapeDetector::openCVGradient( int scale, int delta, int ddepth )
+{
+	cv::Mat abs_grad_x, abs_grad_y;
+	_gradientImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_32S );
+
+	// Gradient X
+	cv::Sobel( _baseImage, _gradX, ddepth, 1, 0, 3, scale, delta, cv::BORDER_DEFAULT );
+	convertScaleAbs( _gradX, abs_grad_x );
+
+	// Gradient Y
+	cv::Sobel( _baseImage, _gradY, ddepth, 0, 1, 3, scale, delta, cv::BORDER_DEFAULT );
+	convertScaleAbs( _gradY, abs_grad_y );
+
+	// Total Gradient (approximate)
+	addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, _gradientImage );
+}
+
+void ShapeDetector::myCustomGradient(float tanpi, int radius)
 {
 	cv::Mat auxGradientImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_16U );
 	std::pair<short,short> gradientVectorImage[_baseImage.rows][_baseImage.cols];
@@ -248,8 +241,7 @@ void ShapeDetector::myCustomGradient(float tanpi)
 	};
 
 	float maxVal = 0.0f;
-	float rd = 5;
-	short w = round(rd * tanpi);
+	short w = round(radius * tanpi);
 	float threshRatio = 0.15f;
 
 	for( ushort r = 1; r < _baseImage.rows - 1; r++ )
@@ -283,8 +275,8 @@ void ShapeDetector::myCustomGradient(float tanpi)
 			auxGradientImage.at<ushort>(r,c) = magG;
 
 			float angle = atan2(vY,vX);
-			short dx = round(rd*cos(angle));
-			short dy = round(rd*sin(angle));
+			short dx = round(radius*cos(angle));
+			short dy = round(radius*sin(angle));
 
 			gradientVectorImage[r][c] = std::make_pair<short,short>( dx, dy );
 		}
@@ -329,7 +321,7 @@ void ShapeDetector::myCustomGradient(float tanpi)
 	}
 }
 
-void ShapeDetector::myCustomGradient2(float tanpi)
+void ShapeDetector::myCustomGradient2(float tanpi, int radius)
 {
 	cv::Mat auxGradientImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_16U );
 	std::pair<short,short> gradientVectorImage[_baseImage.rows][_baseImage.cols];
@@ -338,8 +330,7 @@ void ShapeDetector::myCustomGradient2(float tanpi)
 	_voteImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_8U );
 
 	float maxVal = 0.0f;
-	float rd = 5;
-	short w = round(rd * tanpi);
+	short w = round(radius * tanpi);
 	float threshRatio = 0.15f;
 
 	for( ushort r = 1; r < _baseImage.rows - 1; r++ )
@@ -357,8 +348,8 @@ void ShapeDetector::myCustomGradient2(float tanpi)
 			auxGradientImage.at<ushort>(r,c) = magG;
 
 			float angle = atan2(vY,vX) * RAD_TO_DEGREE;
-			short dx = round(rd*cos(angle));
-			short dy = round(rd*sin(angle));
+			short dx = round(radius*cos(angle));
+			short dy = round(radius*sin(angle));
 
 			std::cout << r << "," << c << ": " << vY << ";" << vX << "->" << angle << "->" << dx << ";"<<dy<< "\t";
 
@@ -411,6 +402,13 @@ void ShapeDetector::myCustomGradient2(float tanpi)
 	}
 }
 
+void ShapeDetector::releaseEquiImageData()
+{
+	for( int i = 0; i < _baseImage.rows; ++i )
+		delete [] _equiImageData[i];
+	delete [] _equiImageData;
+}
+
 ShapeDetector::~ShapeDetector()
 {
 	_baseImage.release();
@@ -419,7 +417,5 @@ ShapeDetector::~ShapeDetector()
 	_magEqImg.release();
 	_shapeResponse.release();
 
-	for( int i = 0; i < _baseImage.rows; ++i )
-		delete [] _equiImageData[i];
-	delete [] _equiImageData;
+	releaseEquiImageData();
 }
