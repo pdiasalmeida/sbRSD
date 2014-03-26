@@ -10,12 +10,16 @@ public:
 	enum SHAPS{ SHAPE_CIR, SHAPE_TRI, SHAPE_SQR, SHAPE_OCT };
 
 	void setImage( std::string path );
-	void computeGradient( int shape, int method = GTYPE_CUST );
+
+	void computeVoteImage( int shape, int method = GTYPE_CUST );
+	void computeEquiMagnitude();
+	void computeShapeResponse();
 
 	cv::Mat getBaseImage();
 	cv::Mat getGradientImage();
 	cv::Mat getVoteImage();
-	cv::Mat getGradientAngles();
+	cv::Mat getMagEqImg();
+	cv::Mat getShapeResponse();
 
 	std::string getMethodName();
 
@@ -25,13 +29,14 @@ protected:
 	cv::Mat _baseImage;
 	cv::Mat _gradientImage;
 	cv::Mat _voteImage;
+	cv::Mat _magEqImg;
+	cv::Mat _shapeResponse;
 
-	cv::Mat _gradientAngles;
-	std::pair<float,float> _equiImage;
+	cv::Point** _equiImageData;
 
 	std::string _imageName;
-
 	int _shape;
+	int _nSides;
 	int _method;
 
 private:

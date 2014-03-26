@@ -9,6 +9,8 @@ ShapeDetector::ShapeDetector()
 {
 	_shape = -1;
 	_method = -1;
+	_nSides = -1;
+	_equiImageData = NULL;
 }
 
 void ShapeDetector::setImage( std::string path )
@@ -39,13 +41,40 @@ cv::Mat ShapeDetector::getVoteImage()
 	return _voteImage;
 }
 
-cv::Mat ShapeDetector::getGradientAngles()
+cv::Mat ShapeDetector::getMagEqImg()
 {
-	assert( !_gradientAngles.empty() );
-	return _gradientAngles;
+	assert( !_magEqImg.empty() );
+	return _magEqImg;
 }
 
-void ShapeDetector::computeGradient( int shape, int method )
+cv::Mat ShapeDetector::getShapeResponse()
+{
+	assert( !_shapeResponse.empty() );
+	return _shapeResponse;
+}
+
+std::string ShapeDetector::getMethodName()
+{
+	std::string result;
+
+	switch( _method ){
+		case GTYPE_OCV:
+			result = "OpenCV gradient";
+			break;
+		case GTYPE_CUST:
+			result = "Custom method 1";
+			break;
+		case GTYPE_CUST2:
+			result = "Custom method 2";
+			break;
+		default:
+			break;
+	}
+
+	return result;
+}
+
+void ShapeDetector::computeVoteImage( int shape, int method )
 {
 	assert( !_baseImage.empty() );
 
@@ -56,15 +85,19 @@ void ShapeDetector::computeGradient( int shape, int method )
 	switch( shape ){
 		case SHAPE_CIR:
 			tanpi = TANPI1;
+			_nSides = 1;
 			break;
 		case SHAPE_TRI:
 			tanpi = TANPI3;
+			_nSides = 3;
 			break;
 		case SHAPE_SQR:
 			tanpi = TANPI4;
+			_nSides = 4;
 			break;
 		case SHAPE_OCT:
 			tanpi = TANPI8;
+			_nSides = 8;
 			break;
 		default:
 			break;
@@ -85,14 +118,57 @@ void ShapeDetector::computeGradient( int shape, int method )
 	}
 }
 
+void ShapeDetector::computeEquiMagnitude()
+{
+	assert( !_voteImage.empty() );
+	_magEqImg = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_8U );
+
+	for( int r = 0; r < _gradientImage.rows; r++ )
+		for( int c = 0; c < _gradientImage.cols; c++ )
+		{
+			int res = sqrt( pow(_equiImageData[r][c].x,2)+pow(_equiImageData[r][c].y,2) );
+			_magEqImg.at<uchar>(r,c) = res>255?255:res;
+		}
+}
+
+void ShapeDetector::computeShapeResponse()
+{
+	assert( !_magEqImg.empty() );
+	_shapeResponse = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_8U );
+
+	float rd = 5;
+	short w = round(rd * TANPI4);
+	float dem = pow(2*w*rd,2);
+
+	for( int r = 0; r < _baseImage.rows; r++ )
+		for( int c = 0; c < _baseImage.cols; c++ )
+		{
+			int v = _voteImage.at<int>(r,c);
+			int m = _magEqImg.at<uchar>(r,c);
+			int num = v*m;
+			if( num > 0 )
+			{
+				int res = round(num/dem);
+				std::cout << res << std::endl;
+				_shapeResponse.at<uchar>(r,c) = res>255?255:res;
+			}
+		}
+}
+
 void ShapeDetector::openCVGradient( float tanpi, int scale, int delta, int ddepth )
 {
 	cv::Mat grad_x, grad_y;
 	cv::Mat abs_grad_x, abs_grad_y;
 
-	_gradientImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_8U );
-	_voteImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_8U );
-	_gradientAngles = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_32F );
+	_gradientImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_32S );
+	_voteImage = cv::Mat::zeros( _baseImage.rows, _baseImage.cols, CV_32S );
+
+	_equiImageData = new cv::Point*[_baseImage.rows];
+
+	for( int r = 0; r < _gradientImage.rows; r++ )
+	{
+		_equiImageData[r] = new cv::Point[_baseImage.cols];
+	}
 
 	short rd = 5;
 	short w = round( rd * tanpi );
@@ -115,26 +191,32 @@ void ShapeDetector::openCVGradient( float tanpi, int scale, int delta, int ddept
 		{
 			if(_gradientImage.at<uchar>(r,c) >= thresh)
 			{
+				int mag = round(sqrt( pow(grad_y.at<float>(r,c),2)+ pow(grad_x.at<float>(r,c),2) ));
 				float angle = atan2(grad_y.at<float>(r,c),grad_x.at<float>(r,c));
 				short dx = round(rd*cos(angle));
 				short dy = round(rd*sin(angle));
+				float nangle = _nSides * angle;
 
 				short vr = (r) + dy;
 				short vc = (c) + dx;
 
 				short xmin = vc - 2*w; if(xmin<0) xmin = 0;
-				short xmax = vc + 2*w; if(xmax>_voteImage.rows-1) xmax = _voteImage.rows-1;
-
-				_gradientAngles.at<float>(r,c) = angle;
+				short xmax = vc + 2*w; if(xmax>=_voteImage.cols) xmax = _voteImage.cols-1;
 
 				for( int i = xmin; i <= xmax; i++ ){
 					if( i < _voteImage.cols && vr >= 0 && vr < _voteImage.rows )
 					{
 						if( i>=vc-w && i<=vc+w ){
-							if( _voteImage.at<uchar>( vr, i) < 245 ) _voteImage.at<uchar>( vr, i ) += 10;
+							_voteImage.at<int>( vr, i ) += mag;
+
+							_equiImageData[vr][i].x += round(cos(nangle));
+							_equiImageData[vr][i].y += round(sin(nangle));
 						}
 						else{
-							if( _voteImage.at<uchar>( vr, i) > 9 ) _voteImage.at<uchar>( vr, i ) -= 10;
+							_voteImage.at<int>( vr, i ) -= mag;
+
+							_equiImageData[vr][i].x += round(cos(-nangle));
+							_equiImageData[vr][i].y += round(sin(-nangle));
 						}
 					}
 				}
@@ -329,30 +411,15 @@ void ShapeDetector::myCustomGradient2(float tanpi)
 	}
 }
 
-std::string ShapeDetector::getMethodName()
-{
-	std::string result;
-
-	switch( _method ){
-		case GTYPE_OCV:
-			result = "OpenCV gradient";
-			break;
-		case GTYPE_CUST:
-			result = "Custom method 1";
-			break;
-		case GTYPE_CUST2:
-			result = "Custom method 2";
-			break;
-		default:
-			break;
-	}
-
-	return result;
-}
-
 ShapeDetector::~ShapeDetector()
 {
 	_baseImage.release();
 	_gradientImage.release();
 	_voteImage.release();
+	_magEqImg.release();
+	_shapeResponse.release();
+
+	for( int i = 0; i < _baseImage.rows; ++i )
+		delete [] _equiImageData[i];
+	delete [] _equiImageData;
 }

@@ -7,7 +7,7 @@
 #include <cmath>
 
 int main(int argc, char** argv) {
-	cv::Mat image, grad, vote;
+	cv::Mat image, grad, vote, magEq, shapeR;
 	ShapeDetector sd;
 
 	sd = ShapeDetector();
@@ -15,8 +15,10 @@ int main(int argc, char** argv) {
 	clock_t t;
 	t = clock();
 
-	sd.setImage("tests/test6.jpg");
-	sd.computeGradient( ShapeDetector::SHAPE_SQR, ShapeDetector::GTYPE_OCV );
+	sd.setImage("tests/test6.png");
+	sd.computeVoteImage( ShapeDetector::SHAPE_SQR, ShapeDetector::GTYPE_OCV );
+	sd.computeEquiMagnitude();
+	sd.computeShapeResponse();
 
 	t = clock() - t;
 	float calcDuration = ( (float) t ) / CLOCKS_PER_SEC;
@@ -28,7 +30,10 @@ int main(int argc, char** argv) {
 	grad = sd.getGradientImage();
 	vote = sd.getVoteImage();
 
-	Auxiliar::printFImage(sd.getGradientAngles());
+	magEq = sd.getMagEqImg();
+	shapeR = sd.getShapeResponse();
+
+	//Auxiliar::printFImage(sd.getGradientAngles());
 
 	cv::namedWindow("Original", CV_WINDOW_NORMAL);
 	cv::imshow("Original", image);
@@ -38,6 +43,12 @@ int main(int argc, char** argv) {
 
 	cv::namedWindow("Vote", CV_WINDOW_NORMAL);
 	cv::imshow("Vote", vote);
+
+	cv::namedWindow("Magnitude", CV_WINDOW_NORMAL);
+	cv::imshow("Magnitude", magEq);
+
+	cv::namedWindow("Shape Response", CV_WINDOW_NORMAL);
+	cv::imshow("Shape Response", shapeR);
 
 	cv::waitKey(0);
 }
